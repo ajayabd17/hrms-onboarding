@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Login Form Handler
     const loginForm = document.getElementById('login-form');
+    const roleSelect = document.getElementById('role');
+    const emailInput = document.getElementById('email');
     if (loginForm) {
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
