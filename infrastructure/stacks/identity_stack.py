@@ -13,7 +13,7 @@ class IdentityStack(Stack):
         # Create Cognito User Pool
         self.user_pool = cognito.UserPool(
             self, "HrmsUserPool",
-            user_pool_name="hrms-user-pool",
+            user_pool_name="User pool - realm",
             self_sign_up_enabled=False,  # No Self-Signup
             sign_in_aliases=cognito.SignInAliases(username=True, email=True),
             auto_verify=cognito.AutoVerifiedAttrs(email=True),
