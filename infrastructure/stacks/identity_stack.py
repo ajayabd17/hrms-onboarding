@@ -1,28 +1,34 @@
+import aws_cdk as cdk
 from aws_cdk import (
     Stack,
     aws_cognito as cognito,
-    CfnOutput
+    CfnOutput,
+    RemovalPolicy
 )
 from constructs import Construct
 
 class IdentityStack(Stack):
-
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Create Cognito User Pool
+        # 1. Create Cognito User Pool
         self.user_pool = cognito.UserPool(
             self, "HrmsUserPool",
             user_pool_name="User pool - realm",
-            self_sign_up_enabled=False,  # No Self-Signup
+            self_sign_up_enabled=False,
             sign_in_aliases=cognito.SignInAliases(username=True, email=True),
             auto_verify=cognito.AutoVerifiedAttrs(email=True),
+            standard_attributes=cognito.StandardAttributes(
+                email=cognito.StandardAttribute(required=True, mutable=True),
+                given_name=cognito.StandardAttribute(required=True, mutable=True)
+            ),
             custom_attributes={
-                "employee_id": cognito.StringAttribute(mutable=True)  # Data Linking bridge
-            }
+                "employee_id": cognito.StringAttribute(mutable=True)
+            },
+            removal_policy=RemovalPolicy.DESTROY 
         )
 
-        # Create User Pool Client
+        # 2. Create User Pool Client
         self.user_pool_client = self.user_pool.add_client(
             "HrmsWebClient",
             user_pool_client_name="hrms-web-client",
@@ -34,6 +40,12 @@ class IdentityStack(Stack):
             )
         )
 
-        # Outputs
+        # 3. Create User Pool Group (HR)
+        cognito.CfnUserPoolGroup(self, "AdminsGroup",
+            user_pool_id=self.user_pool.user_pool_id,
+            group_name="HR",
+            description="HR Administrators with full access"
+        )
+
         CfnOutput(self, "UserPoolId", value=self.user_pool.user_pool_id)
         CfnOutput(self, "UserPoolClientId", value=self.user_pool_client.user_pool_client_id)
