@@ -13,30 +13,19 @@ env = cdk.Environment(
     region=os.environ.get("CDK_DEFAULT_REGION", "ap-south-1")
 )
 
-# -------------------------------
-# 1. Independent Stacks
-# -------------------------------
+# 1. Storage
 storage = StorageStack(app, "HrmsStorageStack", env=env)
 
+# 2. Identity
 identity = IdentityStack(app, "HrmsIdentityStack", env=env)
 
-# -------------------------------
-# 2. Compute Stack (depends on above)
-# -------------------------------
+# 3. Compute (ONLY gets names, not resources)
 compute = ComputeStack(
     app, "HrmsComputeStack",
     employee_table=storage.employee_table,
     user_pool=identity.user_pool,
-    docs_bucket=storage.docs_bucket,
+    docs_bucket_name=storage.docs_bucket.bucket_name,
     env=env
 )
 
-# -------------------------------
-# 🔥 3. CONNECT S3 → LAMBDA HERE
-# -------------------------------
-storage.add_s3_trigger(compute.process_upload_fn.function_arn)
-
-# -------------------------------
-# 4. Synthesize
-# -------------------------------
 app.synth()
