@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Portal | Active Onboarding</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-bg">
+    <nav class="top-nav glass-panel">
+        <div class="nav-brand">
+            <div class="logo-mark small">H</div>
+            <span>Onboarding Portal</span>
+        </div>
+        <div class="user-profile">
+            <span id="user-greeting">Welcome, New Hire</span>
+            <button id="logout-btn" class="btn-outline">Sign Out</button>
+        </div>
+    </nav>
+
+    <main class="dashboard-container slide-up">
+        <header class="dashboard-header">
+            <div class="header-text">
+                <h1>Your Onboarding Journey</h1>
+                <p>Complete the stages below to finalize your HR profile.</p>
+            </div>
+            <div class="status-badge pulse">Status: In Progress</div>
+        </header>
+
+        <section class="progress-section glass-panel">
+            <h2>Overall Progress</h2>
+            <div class="hero-progress-bar">
+                <div class="progress-fill gradient-accent" style="width: 40%"></div>
+            </div>
+            <span class="progress-label">40% Completed</span>
+        </section>
+
+        <section class="stages-grid">
+            <!-- Stage 1: Complete -->
+            <div class="stage-card complete reveal" style="--delay: 0.1s">
+                <div class="stage-icon">✓</div>
+                <div class="stage-info">
+                    <h3>Document Upload</h3>
+                    <p>ID proof, tax forms, and bank details</p>
+                </div>
+                <span class="badge badge-complete">Completed</span>
+            </div>
+
+            <!-- Stage 2: In-Progress -->
+            <div class="stage-card in-progress reveal" style="--delay: 0.2s">
+                <div class="stage-icon spinner-icon">↻</div>
+                <div class="stage-info">
+                    <h3>Background Verification</h3>
+                    <p>Currently under review by the HR team</p>
+                </div>
+                <span class="badge badge-in-progress">In Progress</span>
+            </div>
+
+            <!-- Stage 3: Pending -->
+            <div class="stage-card pending reveal" style="--delay: 0.3s">
+                <div class="stage-icon">⋯</div>
+                <div class="stage-info">
+                    <h3>IT Provisioning</h3>
+                    <p>Laptop allocation and software licenses</p>
+                </div>
+                <span class="badge badge-pending">Pending</span>
+            </div>
+
+            <!-- Stage 4: Pending -->
+            <div class="stage-card pending reveal" style="--delay: 0.4s">
+                <div class="stage-icon">⋯</div>
+                <div class="stage-info">
+                    <h3>Manager Intro</h3>
+                    <p>First day induction and team meet</p>
+                </div>
+                <span class="badge badge-pending">Pending</span>
+            </div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+
+</html>

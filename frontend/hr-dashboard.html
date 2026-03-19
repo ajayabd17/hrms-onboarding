@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Admin | Pipeline Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-bg">
+    <nav class="top-nav glass-panel">
+        <div class="nav-brand">
+            <div class="logo-mark small">HR</div>
+            <span>Admin Control Center</span>
+        </div>
+        <div class="user-profile">
+            <span id="user-greeting">HR Manager</span>
+            <button id="logout-btn" class="btn-outline">Sign Out</button>
+        </div>
+    </nav>
+
+    <main class="dashboard-container slide-up">
+        <header class="dashboard-header hr-header">
+            <div class="header-text">
+                <h1>New Hire Pipeline Tracker</h1>
+                <p>Real-time status of all active employee onboardings.</p>
+            </div>
+            <div class="stats-group">
+                <div class="stat-card">
+                    <span class="stat-num">12</span>
+                    <span class="stat-label">Active</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num">5</span>
+                    <span class="stat-label">Completed</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="pipeline-section glass-panel">
+            <div class="table-controls">
+                <input type="text" class="search-box" placeholder="Search employee...">
+                <button class="btn-primary small">Add Hire</button>
+            </div>
+
+            <div class="pipeline-list" id="pipeline-list">
+                <!-- Dynamically populated via JS, sample structure below -->
+                <div class="pipeline-item reveal">
+                    <div class="emp-details">
+                        <div class="avatar">AS</div>
+                        <div>
+                            <h4>Arjun Sharma</h4>
+                            <span>Software Engineer | ID: EMP-104</span>
+                        </div>
+                    </div>
+                    <div class="hr-progress">
+                        <div class="hero-progress-bar compact">
+                            <div class="progress-fill complete-bg" style="width: 100%"></div>
+                        </div>
+                        <span class="step-label">4/4 Completed</span>
+                    </div>
+                    <div class="status-col">
+                        <span class="badge badge-complete">Ready</span>
+                    </div>
+                    <button class="btn-outline small">View</button>
+                </div>
+
+                <div class="pipeline-item reveal" style="--delay: 0.1s">
+                    <div class="emp-details">
+                        <div class="avatar">MK</div>
+                        <div>
+                            <h4>Maria Khan</h4>
+                            <span>Product Designer | ID: EMP-105</span>
+                        </div>
+                    </div>
+                    <div class="hr-progress">
+                        <div class="hero-progress-bar compact">
+                            <div class="progress-fill in-progress-bg" style="width: 50%"></div>
+                        </div>
+                        <span class="step-label">2/4 Stages</span>
+                    </div>
+                    <div class="status-col">
+                        <span class="badge badge-in-progress">Background Check</span>
+                    </div>
+                    <button class="btn-outline small">View</button>
+                </div>
+
+                <div class="pipeline-item reveal" style="--delay: 0.2s">
+                    <div class="emp-details">
+                        <div class="avatar">JN</div>
+                        <div>
+                            <h4>John N.</h4>
+                            <span>Data Analyst | ID: EMP-106</span>
+                        </div>
+                    </div>
+                    <div class="hr-progress">
+                        <div class="hero-progress-bar compact">
+                            <div class="progress-fill pending-bg" style="width: 25%"></div>
+                        </div>
+                        <span class="step-label">1/4 Stages</span>
+                    </div>
+                    <div class="status-col">
+                        <span class="badge badge-pending">Document Upload</span>
+                    </div>
+                    <button class="btn-outline small">View</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+
+</html>
