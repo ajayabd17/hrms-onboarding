@@ -191,6 +191,7 @@
         const loginForm = document.getElementById('login-form');
         const statusEl = document.getElementById('login-status');
         const newPwdGroup = document.getElementById('new-password-group');
+        const confirmPwdGroup = document.getElementById('confirm-password-group');
 
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
@@ -201,9 +202,18 @@
                     const email = document.getElementById('email').value.trim();
                     const password = document.getElementById('password').value;
                     const newPassword = document.getElementById('new_password').value;
+                    const confirmNewPassword = (document.getElementById('confirm_new_password') || {}).value || '';
                     const challengeSession = sessionStorage.getItem('HRMS_CHALLENGE_SESSION') || '';
 
                     if (challengeSession && newPassword) {
+                        if (!confirmNewPassword) {
+                            if (statusEl) statusEl.textContent = 'Please re-enter new password.';
+                            return;
+                        }
+                        if (newPassword !== confirmNewPassword) {
+                            if (statusEl) statusEl.textContent = 'New password and confirm password do not match.';
+                            return;
+                        }
                         const resp = await fetchJson(`${cfg.apiBase}/auth/complete-new-password`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -222,8 +232,9 @@
 
                     if (resp.challenge === 'NEW_PASSWORD_REQUIRED') {
                         sessionStorage.setItem('HRMS_CHALLENGE_SESSION', resp.session || '');
-                        if (statusEl) statusEl.textContent = 'First login: set a new password and submit again.';
+                        if (statusEl) statusEl.textContent = 'First login: set your new password and confirm it.';
                         if (newPwdGroup) newPwdGroup.style.display = 'block';
+                        if (confirmPwdGroup) confirmPwdGroup.style.display = 'block';
                         return;
                     }
 
