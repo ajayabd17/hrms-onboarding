@@ -49,14 +49,14 @@
     const loadConfig = async () => {
         try {
             const fileCfg = await fetchJson('./config.json');
-            cfg.apiBase = (fileCfg.apiBaseUrl || '').replace(/\/+$/, '');
+            cfg.apiBase = (fileCfg.apiBaseUrl || '').trim().replace(/\/+$/, '');
             cfg.cognitoDomain = fileCfg.cognitoDomain || '';
             cfg.cognitoClientId = fileCfg.cognitoClientId || '';
         } catch (_e) {
             // fallback to localStorage
         }
 
-        if (!cfg.apiBase) cfg.apiBase = (localStorage.getItem('HRMS_API_BASE_URL') || '').replace(/\/+$/, '');
+        if (!cfg.apiBase) cfg.apiBase = (localStorage.getItem('HRMS_API_BASE_URL') || '').trim().replace(/\/+$/, '');
         if (!cfg.cognitoDomain) cfg.cognitoDomain = localStorage.getItem('HRMS_COGNITO_DOMAIN') || '';
         if (!cfg.cognitoClientId) cfg.cognitoClientId = localStorage.getItem('HRMS_COGNITO_CLIENT_ID') || '';
     };
@@ -110,6 +110,11 @@
     const fetchEmployees = async () => fetchJson(`${cfg.apiBase}/employees`, { headers: authHeader() });
     const createEmployee = async (payload) => fetchJson(`${cfg.apiBase}/employees`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() }, body: JSON.stringify(payload)
+    });
+    const completeStage = async (employeeId, stage) => fetchJson(`${cfg.apiBase}/onboarding/${employeeId}/stage-complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ stage })
     });
 
     const getUploadUrl = async (employeeId, docType, file) => {
@@ -169,7 +174,11 @@
             const statusClass = isComplete ? 'badge-complete' : (emp.active_stage === 'PENDING' ? 'badge-pending' : 'badge-in-progress');
             const statusText = isComplete ? 'Ready' : (emp.active_stage || 'PENDING');
             const initials = (emp.full_name || 'NA').slice(0, 2).toUpperCase();
-            list.insertAdjacentHTML('beforeend', `<div class="pipeline-item reveal"><div class="emp-details"><div class="avatar">${initials}</div><div><h4>${emp.full_name || emp.email || emp.employee_id}</h4><span>${emp.department || 'NA'} | ID: ${emp.employee_id}</span></div></div><div class="hr-progress"><div class="hero-progress-bar compact"><div class="progress-fill in-progress-bg" style="width: ${pct}%"></div></div><span class="step-label">${done}/4 Completed</span></div><div class="status-col"><span class="badge ${statusClass}">${statusText}</span></div></div>`);
+            const canComplete = !isComplete && stageOrder.includes(emp.active_stage || '');
+            const actionHtml = canComplete
+                ? `<button class="btn-outline small hr-complete-stage-btn" data-employee-id="${emp.employee_id}" data-stage="${emp.active_stage}">Complete ${stageTitles[emp.active_stage] || emp.active_stage}</button>`
+                : '';
+            list.insertAdjacentHTML('beforeend', `<div class="pipeline-item reveal"><div class="emp-details"><div class="avatar">${initials}</div><div><h4>${emp.full_name || emp.email || emp.employee_id}</h4><span>${emp.department || 'NA'} | ID: ${emp.employee_id}</span></div></div><div class="hr-progress"><div class="hero-progress-bar compact"><div class="progress-fill in-progress-bg" style="width: ${pct}%"></div></div><span class="step-label">${done}/4 Completed</span></div><div class="status-col"><span class="badge ${statusClass}">${statusText}</span>${actionHtml}</div></div>`);
         });
 
         if (activeEl) activeEl.textContent = String(active);
@@ -298,6 +307,28 @@
                         renderPipeline(await fetchEmployees());
                     } catch (err) {
                         if (status) status.textContent = `Failed: ${err.message}`;
+                    }
+                });
+            }
+
+            const pipeline = document.getElementById('pipeline-list');
+            if (pipeline) {
+                pipeline.addEventListener('click', async (e) => {
+                    const btn = e.target.closest('.hr-complete-stage-btn');
+                    if (!btn) return;
+                    const employeeId = btn.getAttribute('data-employee-id') || '';
+                    const stage = btn.getAttribute('data-stage') || '';
+                    if (!employeeId || !stage) return;
+                    const oldText = btn.textContent;
+                    btn.disabled = true;
+                    btn.textContent = 'Updating...';
+                    try {
+                        await completeStage(employeeId, stage);
+                        renderPipeline(await fetchEmployees());
+                    } catch (err) {
+                        btn.disabled = false;
+                        btn.textContent = oldText;
+                        if (status) status.textContent = `Stage update failed: ${err.message}`;
                     }
                 });
             }
