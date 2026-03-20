@@ -13,8 +13,22 @@ sns = boto3.client('sns')
 events = boto3.client('events')
 
 REQUIRED_DOCS = {'ID_PROOF', 'DEGREE_CERT', 'OFFER_LETTER'}
-ALLOWED_TYPES = {'application/pdf', 'image/jpeg', 'image/png'}
+ALLOWED_TYPES = {
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/jpg',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
 MAX_BYTES = 10 * 1024 * 1024
+
+
+def _normalize_content_type(content_type: str) -> str:
+    ctype = (content_type or '').strip().lower()
+    if ctype == 'image/jpg':
+        return 'image/jpeg'
+    return ctype
 
 
 def _remove_rule(rule_name: str):
@@ -51,10 +65,10 @@ def handler(event, _context):
             reason = 'FILE_TOO_LARGE'
         else:
             head = s3.head_object(Bucket=bucket, Key=key)
-            content_type = head.get('ContentType', '')
+            content_type = _normalize_content_type(head.get('ContentType', ''))
             if content_type not in ALLOWED_TYPES:
                 status = 'REJECTED'
-                reason = 'UNSUPPORTED_TYPE'
+                reason = f'UNSUPPORTED_TYPE:{content_type or "unknown"}'
 
         now = datetime.now(timezone.utc).isoformat()
         doc_table.put_item(Item={

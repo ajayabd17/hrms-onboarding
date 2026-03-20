@@ -6,7 +6,21 @@ import boto3
 
 s3 = boto3.client('s3')
 ALLOWED_DOC_TYPES = {'ID_PROOF', 'DEGREE_CERT', 'OFFER_LETTER'}
-ALLOWED_CONTENT_TYPES = {'application/pdf', 'image/jpeg', 'image/png'}
+ALLOWED_CONTENT_TYPES = {
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/jpg',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
+
+
+def _normalize_content_type(content_type: str) -> str:
+    ctype = (content_type or '').strip().lower()
+    if ctype == 'image/jpg':
+        return 'image/jpeg'
+    return ctype
 
 
 def _cors_origin(event):
@@ -35,14 +49,18 @@ def handler(event, _context):
     employee_id = qs.get('employee_id')
     doc_type = qs.get('doc_type')
     file_name = qs.get('file_name', 'document.pdf')
-    content_type = qs.get('content_type', 'application/pdf')
+    content_type = _normalize_content_type(qs.get('content_type', 'application/pdf'))
 
     if not employee_id or not doc_type:
         return _resp(400, {'error': 'employee_id and doc_type are required'}, event)
     if doc_type not in ALLOWED_DOC_TYPES:
         return _resp(400, {'error': f'unsupported doc_type: {doc_type}'}, event)
     if content_type not in ALLOWED_CONTENT_TYPES:
-        return _resp(400, {'error': f'unsupported content_type: {content_type}'}, event)
+        return _resp(
+            400,
+            {'error': f'unsupported content_type: {content_type}. Allowed: {", ".join(sorted(ALLOWED_CONTENT_TYPES))}'},
+            event
+        )
 
     key = f"documents/{employee_id}/{doc_type}/{file_name}"
 
@@ -57,4 +75,4 @@ def handler(event, _context):
         ExpiresIn=900,
     )
 
-    return _resp(200, {'upload_url': upload_url, 'key': key}, event)
+    return _resp(200, {'upload_url': upload_url, 'key': key})

@@ -131,6 +131,7 @@
         });
         if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
     };
+    const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
     const renderEmployeeProgress = (payload) => {
         if (!payload || !Array.isArray(payload.stages)) return;
@@ -291,6 +292,9 @@
                     try {
                         for (const f of files) {
                             if (!f.file) throw new Error(`Missing ${f.type}`);
+                            if (f.file.size > MAX_UPLOAD_BYTES) {
+                                throw new Error(`${f.type} exceeds 10 MB limit`);
+                            }
                             const u = await getUploadUrl(empId, f.type, f.file);
                             await uploadFile(u.upload_url, f.file);
                         }
