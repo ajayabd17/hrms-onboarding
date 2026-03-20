@@ -23,7 +23,12 @@ class IdentityStack(Stack):
                 given_name=cognito.StandardAttribute(required=True, mutable=True)
             ),
             custom_attributes={
-                "employee_id": cognito.StringAttribute(mutable=True)
+                "employee_id": cognito.StringAttribute(mutable=True),
+                "department": cognito.StringAttribute(mutable=True),
+                "role": cognito.StringAttribute(mutable=True),
+                "manager": cognito.StringAttribute(mutable=True),
+                "joining_date": cognito.StringAttribute(mutable=True),
+                "employment_type": cognito.StringAttribute(mutable=True)
             },
             removal_policy=RemovalPolicy.DESTROY 
         )
