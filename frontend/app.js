@@ -11,13 +11,19 @@
     const isEmployee = () => window.location.pathname.endsWith('employee-dashboard.html');
     const isHr = () => window.location.pathname.endsWith('hr-dashboard.html');
 
-    const cfg = { apiBase: (localStorage.getItem('HRMS_API_BASE_URL') || '').replace(/\/+$/, '') };
+    const cfg = {
+        apiBase: '',
+        cognitoDomain: '',
+        cognitoClientId: '',
+    };
 
     const parseJwt = (token) => {
         try {
             const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
             return JSON.parse(atob(part));
-        } catch (_e) { return {}; }
+        } catch (_e) {
+            return {};
+        }
     };
 
     const authTokens = () => ({
@@ -40,6 +46,21 @@
         return res.json();
     };
 
+    const loadConfig = async () => {
+        try {
+            const fileCfg = await fetchJson('./config.json');
+            cfg.apiBase = (fileCfg.apiBaseUrl || '').replace(/\/+$/, '');
+            cfg.cognitoDomain = fileCfg.cognitoDomain || '';
+            cfg.cognitoClientId = fileCfg.cognitoClientId || '';
+        } catch (_e) {
+            // fallback to localStorage
+        }
+
+        if (!cfg.apiBase) cfg.apiBase = (localStorage.getItem('HRMS_API_BASE_URL') || '').replace(/\/+$/, '');
+        if (!cfg.cognitoDomain) cfg.cognitoDomain = localStorage.getItem('HRMS_COGNITO_DOMAIN') || '';
+        if (!cfg.cognitoClientId) cfg.cognitoClientId = localStorage.getItem('HRMS_COGNITO_CLIENT_ID') || '';
+    };
+
     const setTokensAndRoute = (payload) => {
         localStorage.setItem('HRMS_ID_TOKEN', payload.id_token || '');
         localStorage.setItem('HRMS_ACCESS_TOKEN', payload.access_token || '');
@@ -48,8 +69,11 @@
         const employeeId = claims['custom:employee_id'] || '';
         if (employeeId) localStorage.setItem('HRMS_EMPLOYEE_ID', employeeId);
 
-        if (groups.includes('HR')) window.location.href = 'hr-dashboard.html';
-        else window.location.href = employeeId ? `employee-dashboard.html?employee_id=${encodeURIComponent(employeeId)}` : 'employee-dashboard.html';
+        if (groups.includes('HR')) {
+            window.location.href = 'hr-dashboard.html';
+        } else {
+            window.location.href = employeeId ? `employee-dashboard.html?employee_id=${encodeURIComponent(employeeId)}` : 'employee-dashboard.html';
+        }
     };
 
     const enforceAuth = () => {
@@ -64,8 +88,14 @@
 
     const enforceRoleGuards = () => {
         const groups = parseJwt(localStorage.getItem('HRMS_ID_TOKEN') || '')['cognito:groups'] || [];
-        if (isHr() && !groups.includes('HR')) { window.location.href = 'employee-dashboard.html'; return false; }
-        if (isEmployee() && groups.includes('HR')) { window.location.href = 'hr-dashboard.html'; return false; }
+        if (isHr() && !groups.includes('HR')) {
+            window.location.href = 'employee-dashboard.html';
+            return false;
+        }
+        if (isEmployee() && groups.includes('HR')) {
+            window.location.href = 'hr-dashboard.html';
+            return false;
+        }
         return true;
     };
 
@@ -78,7 +108,9 @@
 
     const fetchProgress = async (employeeId) => fetchJson(`${cfg.apiBase}/onboarding/${employeeId}/progress`, { headers: authHeader() });
     const fetchEmployees = async () => fetchJson(`${cfg.apiBase}/employees`, { headers: authHeader() });
-    const createEmployee = async (payload) => fetchJson(`${cfg.apiBase}/employees`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() }, body: JSON.stringify(payload) });
+    const createEmployee = async (payload) => fetchJson(`${cfg.apiBase}/employees`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() }, body: JSON.stringify(payload)
+    });
 
     const getUploadUrl = async (employeeId, docType, file) => {
         const qs = new URLSearchParams({ employee_id: employeeId, doc_type: docType, file_name: file.name, content_type: file.type });
@@ -86,7 +118,11 @@
     };
 
     const uploadFile = async (url, file) => {
-        const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type, 'x-amz-server-side-encryption': 'AES256' }, body: file });
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type, 'x-amz-server-side-encryption': 'AES256' },
+            body: file
+        });
         if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
     };
 
@@ -141,6 +177,8 @@
     };
 
     document.addEventListener('DOMContentLoaded', async () => {
+        await loadConfig();
+
         const loginForm = document.getElementById('login-form');
         const statusEl = document.getElementById('login-status');
         const newPwdGroup = document.getElementById('new-password-group');
@@ -149,7 +187,7 @@
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 try {
-                    if (!cfg.apiBase) throw new Error('HRMS_API_BASE_URL not set');
+                    if (!cfg.apiBase) throw new Error('HRMS_API_BASE_URL not configured in config.json');
 
                     const email = document.getElementById('email').value.trim();
                     const password = document.getElementById('password').value;
@@ -235,7 +273,11 @@
             const createForm = document.getElementById('create-employee-form');
             const status = document.getElementById('create-employee-status');
 
-            if (toggleBtn && createForm) toggleBtn.addEventListener('click', () => { createForm.style.display = createForm.style.display === 'none' ? 'block' : 'none'; });
+            if (toggleBtn && createForm) {
+                toggleBtn.addEventListener('click', () => {
+                    createForm.style.display = createForm.style.display === 'none' ? 'block' : 'none';
+                });
+            }
 
             if (createForm) {
                 createForm.addEventListener('submit', async (e) => {

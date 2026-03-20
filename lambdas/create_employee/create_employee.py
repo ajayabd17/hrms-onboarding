@@ -95,9 +95,7 @@ def handler(event, context):
         fn_arn = context.invoked_function_arn
         region = fn_arn.split(':')[3]
         account_id = fn_arn.split(':')[4]
-        state_machine_arn = (
-            f"arn:aws:states:{region}:{account_id}:stateMachine:{os.environ['STATE_MACHINE_NAME']}"
-        )
+        state_machine_arn = f"arn:aws:states:{region}:{account_id}:stateMachine:{os.environ['STATE_MACHINE_NAME']}"
 
     if state_machine_arn:
         exec_resp = sfn.start_execution(
