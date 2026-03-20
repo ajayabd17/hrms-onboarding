@@ -8,6 +8,7 @@
     };
 
     const isIndex = () => window.location.pathname.endsWith('/') || window.location.pathname.endsWith('index.html');
+    const isChangePassword = () => window.location.pathname.endsWith('change-password.html');
     const isEmployee = () => window.location.pathname.endsWith('employee-dashboard.html');
     const isHr = () => window.location.pathname.endsWith('hr-dashboard.html');
 
@@ -77,7 +78,7 @@
     };
 
     const enforceAuth = () => {
-        if (isIndex()) return true;
+        if (isIndex() || isChangePassword()) return true;
         const { idToken, accessToken } = authTokens();
         if (!idToken && !accessToken) {
             window.location.href = 'index.html';
@@ -190,8 +191,8 @@
 
         const loginForm = document.getElementById('login-form');
         const statusEl = document.getElementById('login-status');
-        const newPwdGroup = document.getElementById('new-password-group');
-        const confirmPwdGroup = document.getElementById('confirm-password-group');
+        const changePasswordForm = document.getElementById('change-password-form');
+        const changePasswordStatus = document.getElementById('change-password-status');
 
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
@@ -201,28 +202,6 @@
 
                     const email = document.getElementById('email').value.trim();
                     const password = document.getElementById('password').value;
-                    const newPassword = document.getElementById('new_password').value;
-                    const confirmNewPassword = (document.getElementById('confirm_new_password') || {}).value || '';
-                    const challengeSession = sessionStorage.getItem('HRMS_CHALLENGE_SESSION') || '';
-
-                    if (challengeSession && newPassword) {
-                        if (!confirmNewPassword) {
-                            if (statusEl) statusEl.textContent = 'Please re-enter new password.';
-                            return;
-                        }
-                        if (newPassword !== confirmNewPassword) {
-                            if (statusEl) statusEl.textContent = 'New password and confirm password do not match.';
-                            return;
-                        }
-                        const resp = await fetchJson(`${cfg.apiBase}/auth/complete-new-password`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, new_password: newPassword, session: challengeSession })
-                        });
-                        sessionStorage.removeItem('HRMS_CHALLENGE_SESSION');
-                        setTokensAndRoute(resp);
-                        return;
-                    }
 
                     const resp = await fetchJson(`${cfg.apiBase}/auth/login`, {
                         method: 'POST',
@@ -232,15 +211,51 @@
 
                     if (resp.challenge === 'NEW_PASSWORD_REQUIRED') {
                         sessionStorage.setItem('HRMS_CHALLENGE_SESSION', resp.session || '');
-                        if (statusEl) statusEl.textContent = 'First login: set your new password and confirm it.';
-                        if (newPwdGroup) newPwdGroup.style.display = 'block';
-                        if (confirmPwdGroup) confirmPwdGroup.style.display = 'block';
+                        sessionStorage.setItem('HRMS_CHALLENGE_EMAIL', email);
+                        window.location.href = 'change-password.html';
                         return;
                     }
 
                     setTokensAndRoute(resp);
                 } catch (err) {
                     if (statusEl) statusEl.textContent = `Login failed: ${err.message}`;
+                }
+            });
+        }
+
+        if (changePasswordForm) {
+            changePasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                try {
+                    if (!cfg.apiBase) throw new Error('HRMS_API_BASE_URL not configured in config.json');
+                    const newPassword = document.getElementById('new_password').value;
+                    const confirmNewPassword = document.getElementById('confirm_new_password').value;
+                    const session = sessionStorage.getItem('HRMS_CHALLENGE_SESSION') || '';
+                    const email = sessionStorage.getItem('HRMS_CHALLENGE_EMAIL') || '';
+
+                    if (!session || !email) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    if (!newPassword || !confirmNewPassword) {
+                        if (changePasswordStatus) changePasswordStatus.textContent = 'Please fill both password fields.';
+                        return;
+                    }
+                    if (newPassword !== confirmNewPassword) {
+                        if (changePasswordStatus) changePasswordStatus.textContent = 'New password and confirm password do not match.';
+                        return;
+                    }
+
+                    const resp = await fetchJson(`${cfg.apiBase}/auth/complete-new-password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, new_password: newPassword, session })
+                    });
+                    sessionStorage.removeItem('HRMS_CHALLENGE_SESSION');
+                    sessionStorage.removeItem('HRMS_CHALLENGE_EMAIL');
+                    setTokensAndRoute(resp);
+                } catch (err) {
+                    if (changePasswordStatus) changePasswordStatus.textContent = `Failed: ${err.message}`;
                 }
             });
         }

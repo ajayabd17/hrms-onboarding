@@ -28,7 +28,6 @@ class ComputeStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         lambdas_root = Path(__file__).resolve().parents[2] / "lambdas"
         ses_from_email = self.node.try_get_context("sesFromEmail") or os.environ.get("HRMS_SES_FROM_EMAIL", "")
-        temp_password = self.node.try_get_context("tempPassword") or os.environ.get("HRMS_TEMP_PASSWORD", "TempPassw0rd!")
 
         common_env = {
             "EMPLOYEE_TABLE": employee_table.table_name,
@@ -48,7 +47,7 @@ class ComputeStack(Stack):
             "STATE_MACHINE_NAME": "hrms-onboarding-workflow",
             "PORTAL_URL": frontend_origin,
             "SES_FROM_EMAIL": ses_from_email,
-            "TEMP_PASSWORD": temp_password,
+            "EMPLOYEE_GROUP": os.environ.get("HRMS_EMPLOYEE_GROUP", "employee"),
         }
 
         self.auth_login_fn = _lambda.Function(

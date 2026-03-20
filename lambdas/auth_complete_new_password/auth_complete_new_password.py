@@ -38,6 +38,7 @@ def handler(event, _context):
         if not username or not new_password or not session:
             return _resp(400, {'error': 'email, new_password and session required'}, event)
 
+        inferred_given_name = (username.split('@')[0] if '@' in username else username) or 'User'
         resp = cognito.respond_to_auth_challenge(
             ClientId=os.environ['COGNITO_CLIENT_ID'],
             ChallengeName='NEW_PASSWORD_REQUIRED',
@@ -45,6 +46,7 @@ def handler(event, _context):
             ChallengeResponses={
                 'USERNAME': username,
                 'NEW_PASSWORD': new_password,
+                'userAttributes.given_name': inferred_given_name,
             }
         )
     except cognito.exceptions.InvalidPasswordException:
@@ -66,3 +68,4 @@ def handler(event, _context):
         'expires_in': auth.get('ExpiresIn', 3600),
         'token_type': auth.get('TokenType', 'Bearer')
     }, event)
+

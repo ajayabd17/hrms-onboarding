@@ -77,6 +77,12 @@ def handler(event, context):
         ]
     )
 
+    cognito.admin_add_user_to_group(
+        UserPoolId=os.environ['USER_POOL_ID'],
+        Username=payload['email'].strip().lower(),
+        GroupName=os.environ.get('EMPLOYEE_GROUP', 'employee')
+    )
+
     portal_url = os.environ.get('PORTAL_URL', 'http://localhost:5173')
     if os.environ.get('SES_FROM_EMAIL'):
         ses.send_email(
@@ -121,3 +127,5 @@ def handler(event, context):
     })
 
     return _resp(200, {'employee_id': employee_id, 'execution_arn': execution_arn}, event)
+
+
