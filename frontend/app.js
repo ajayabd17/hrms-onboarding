@@ -1,3 +1,7 @@
+// AWS Cognito Configuration
+const COGNITO_CLIENT_ID = 'hp08mpeaq49rmj1l0fo36gmdq'; // Replace with your actual App Client ID
+const COGNITO_REGION = 'ap-south-1'; // e.g., 'us-east-1'
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // Login Form Handler
@@ -17,17 +21,66 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.pointerEvents = 'none';
             btnText.innerHTML = 'Authenticating...';
             
-            // Check the selected role to route the user (mock auth)
-            const role = document.querySelector('input[name="role"]:checked').value;
+            // Authenticate with Cognito via REST API
+            const passwordInput = document.getElementById('password');
+            const errorBox = document.getElementById('login-error');
+            if (errorBox) errorBox.classList.add('hidden');
             
-            // Simulate network delay for effect
-            setTimeout(() => {
-                if (role === 'employee') {
-                    window.location.href = 'employee-dashboard.html';
-                } else {
-                    window.location.href = 'hr-dashboard.html';
+            fetch(`https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-amz-json-1.1',
+                    'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth'
+                },
+                body: JSON.stringify({
+                    AuthParameters: {
+                        USERNAME: emailInput.value,
+                        PASSWORD: passwordInput.value
+                    },
+                    AuthFlow: 'USER_PASSWORD_AUTH',
+                    ClientId: COGNITO_CLIENT_ID
+                })
+            })
+            .then(response => response.json().then(data => ({ status: response.status, body: data })))
+            .then(({ status, body }) => {
+                if (status !== 200) {
+                    throw new Error(body.message || 'Authentication failed');
                 }
-            }, 1000);
+                
+                const idToken = body.AuthenticationResult.IdToken;
+                const accessToken = body.AuthenticationResult.AccessToken;
+                
+                sessionStorage.setItem('idToken', idToken);
+                sessionStorage.setItem('accessToken', accessToken);
+                
+                // Decode JWT payload to extract groups
+                const base64Url = idToken.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+                    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+                ).join(''));
+                
+                const payload = JSON.parse(jsonPayload);
+                const groups = payload['cognito:groups'] || [];
+                
+                if (groups.includes('HR') || groups.includes('Manager')) {
+                    window.location.href = 'hr-dashboard.html';
+                } else {
+                    window.location.href = 'employee-dashboard.html';
+                }
+            })
+            .catch(err => {
+                if (errorBox) {
+                    errorBox.textContent = err.message;
+                    errorBox.classList.remove('hidden');
+                } else {
+                    alert(err.message);
+                }
+                // Reset button
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                btnText.innerHTML = 'Sign In Securely';
+            });
         });
     }
 

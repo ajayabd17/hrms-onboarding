@@ -26,14 +26,7 @@
                 <input type="password" id="password" placeholder="••••••••" required>
             </div>
             
-            <!-- Custom Demo Mode Selector for local testing without Cognito -->
-            <div class="demo-role-selector">
-                <p>Demo Login Role:</p>
-                <div class="radio-group">
-                    <label><input type="radio" name="role" value="employee" checked> Employee</label>
-                    <label><input type="radio" name="role" value="hr"> HR Admin</label>
-                </div>
-            </div>
+            <div id="login-error" class="error-message hidden" style="color: #ff4d4f; font-size: 0.875rem; margin-bottom: 1rem; text-align: center;"></div>
 
             <button type="submit" class="btn-primary" id="login-btn">
                 <span>Sign In Securely</span>
