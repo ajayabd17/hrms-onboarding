@@ -1,0 +1,96 @@
+{
+  "Comment": "HRMS Employee Onboarding",
+  "StartAt": "DocumentCollection",
+  "States": {
+    "DocumentCollection": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {
+        "FunctionName": "${StageExecutorArn}",
+        "Payload": {
+          "stage": "DOC_COLLECTION",
+          "taskToken.$": "$$.Task.Token",
+          "employeeId.$": "$.employeeId"
+        }
+      },
+      "ResultPath": "$.docResult",
+      "HeartbeatSeconds": 259200,
+      "Next": "ITProvisioning",
+      "Catch": [
+        { "ErrorEquals": ["States.ALL"], "Next": "HandleFailure" }
+      ]
+    },
+    "ITProvisioning": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {
+        "FunctionName": "${StageExecutorArn}",
+        "Payload": {
+          "stage": "IT_PROVISIONING",
+          "taskToken.$": "$$.Task.Token",
+          "employeeId.$": "$.employeeId"
+        }
+      },
+      "ResultPath": "$.itResult",
+      "HeartbeatSeconds": 259200,
+      "Next": "PolicySignoff",
+      "Catch": [
+        { "ErrorEquals": ["States.ALL"], "Next": "HandleFailure" }
+      ]
+    },
+    "PolicySignoff": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {
+        "FunctionName": "${StageExecutorArn}",
+        "Payload": {
+          "stage": "POLICY_SIGNOFF",
+          "taskToken.$": "$$.Task.Token",
+          "employeeId.$": "$.employeeId"
+        }
+      },
+      "ResultPath": "$.policyResult",
+      "HeartbeatSeconds": 259200,
+      "Next": "ManagerIntro",
+      "Catch": [
+        { "ErrorEquals": ["States.ALL"], "Next": "HandleFailure" }
+      ]
+    },
+    "ManagerIntro": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {
+        "FunctionName": "${StageExecutorArn}",
+        "Payload": {
+          "stage": "MANAGER_INTRO",
+          "taskToken.$": "$$.Task.Token",
+          "employeeId.$": "$.employeeId"
+        }
+      },
+      "ResultPath": "$.managerResult",
+      "HeartbeatSeconds": 259200,
+      "Next": "FinalizeOnboarding",
+      "Catch": [
+        { "ErrorEquals": ["States.ALL"], "Next": "HandleFailure" }
+      ]
+    },
+    "FinalizeOnboarding": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${FinalizeLambdaArn}",
+        "Payload.$": "$"
+      },
+      "End": true
+    },
+    "HandleFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${HrTopicArn}",
+        "Message.$": "States.Format('Onboarding workflow failed for employee {}', $.employeeId)"
+      },
+      "End": true
+    }
+  }
+}

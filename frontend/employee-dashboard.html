@@ -25,7 +25,7 @@
         <header class="dashboard-header">
             <div class="header-text">
                 <h1>Your Onboarding Journey</h1>
-                <p>Complete the stages below to finalize your HR profile.</p>
+                <p>Complete all stages to be Day 1 ready.</p>
             </div>
             <div class="status-badge pulse">Status: In Progress</div>
         </header>
@@ -33,52 +33,32 @@
         <section class="progress-section glass-panel">
             <h2>Overall Progress</h2>
             <div class="hero-progress-bar">
-                <div class="progress-fill gradient-accent" style="width: 40%"></div>
+                <div class="progress-fill gradient-accent" style="width: 0%"></div>
             </div>
-            <span class="progress-label">40% Completed</span>
+            <span class="progress-label">0% Completed</span>
         </section>
 
-        <section class="stages-grid">
-            <!-- Stage 1: Complete -->
-            <div class="stage-card complete reveal" style="--delay: 0.1s">
-                <div class="stage-icon">✓</div>
-                <div class="stage-info">
-                    <h3>Document Upload</h3>
-                    <p>ID proof, tax forms, and bank details</p>
+        <section class="pipeline-section glass-panel" style="margin-top: 16px;">
+            <h2>Document Collection</h2>
+            <form id="employee-doc-form">
+                <div class="table-controls" style="gap: 10px; margin-bottom: 10px;">
+                    <label>ID Proof (PDF/JPG/PNG)</label>
+                    <input type="file" id="doc_id_proof" accept="application/pdf,image/png,image/jpeg" required>
                 </div>
-                <span class="badge badge-complete">Completed</span>
-            </div>
-
-            <!-- Stage 2: In-Progress -->
-            <div class="stage-card in-progress reveal" style="--delay: 0.2s">
-                <div class="stage-icon spinner-icon">↻</div>
-                <div class="stage-info">
-                    <h3>Background Verification</h3>
-                    <p>Currently under review by the HR team</p>
+                <div class="table-controls" style="gap: 10px; margin-bottom: 10px;">
+                    <label>Degree Certificate (PDF/JPG/PNG)</label>
+                    <input type="file" id="doc_degree_cert" accept="application/pdf,image/png,image/jpeg" required>
                 </div>
-                <span class="badge badge-in-progress">In Progress</span>
-            </div>
-
-            <!-- Stage 3: Pending -->
-            <div class="stage-card pending reveal" style="--delay: 0.3s">
-                <div class="stage-icon">⋯</div>
-                <div class="stage-info">
-                    <h3>IT Provisioning</h3>
-                    <p>Laptop allocation and software licenses</p>
+                <div class="table-controls" style="gap: 10px; margin-bottom: 10px;">
+                    <label>Signed Offer Letter (PDF/JPG/PNG)</label>
+                    <input type="file" id="doc_offer_letter" accept="application/pdf,image/png,image/jpeg" required>
                 </div>
-                <span class="badge badge-pending">Pending</span>
-            </div>
-
-            <!-- Stage 4: Pending -->
-            <div class="stage-card pending reveal" style="--delay: 0.4s">
-                <div class="stage-icon">⋯</div>
-                <div class="stage-info">
-                    <h3>Manager Intro</h3>
-                    <p>First day induction and team meet</p>
-                </div>
-                <span class="badge badge-pending">Pending</span>
-            </div>
+                <button type="submit" class="btn-primary small">Upload Documents</button>
+                <div id="employee-doc-status" style="font-size:14px; margin-top:8px;"></div>
+            </form>
         </section>
+
+        <section class="stages-grid"></section>
     </main>
     <script src="app.js"></script>
 </body>

@@ -13,28 +13,22 @@
             <div class="logo-mark">H</div>
             <h2>HRMS Portal</h2>
         </div>
-        <p class="login-subtitle">Welcome to your secure onboarding journey</p>
-        
+        <p class="login-subtitle">Sign in to continue onboarding.</p>
+
         <form id="login-form" class="auth-form">
             <div class="input-group">
-                <label for="email">Work Email / User ID</label>
-                <input type="text" id="email" placeholder="e.g. employee@company.com" required>
+                <label for="email">Email</label>
+                <input type="email" id="email" required>
             </div>
-            
             <div class="input-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="••••••••" required>
+                <input type="password" id="password" required>
             </div>
-            
-            <!-- Custom Demo Mode Selector for local testing without Cognito -->
-            <div class="demo-role-selector">
-                <p>Demo Login Role:</p>
-                <div class="radio-group">
-                    <label><input type="radio" name="role" value="employee" checked> Employee</label>
-                    <label><input type="radio" name="role" value="hr"> HR Admin</label>
-                </div>
+            <div class="input-group" id="new-password-group" style="display:none;">
+                <label for="new_password">Set New Password</label>
+                <input type="password" id="new_password" placeholder="Required for first login">
             </div>
-
+            <div id="login-status" style="font-size:14px; margin: 8px 0;"></div>
             <button type="submit" class="btn-primary" id="login-btn">
                 <span>Sign In Securely</span>
                 <div class="loader hidden"></div>

@@ -1,64 +1,199 @@
 from aws_cdk import (
     Stack,
+    Duration,
     aws_lambda as _lambda,
     aws_iam as iam,
-    Duration,
+    aws_s3 as s3,
 )
 from constructs import Construct
+from pathlib import Path
 
 
 class ComputeStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str,
-                 employee_table, user_pool, docs_bucket_name, **kwargs):
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        employee_table,
+        workflow_table,
+        stage_status_table,
+        document_table,
+        user_pool,
+        user_pool_client_id: str,
+        docs_bucket,
+        hr_topic,
+        frontend_origin: str,
+        **kwargs,
+    ):
         super().__init__(scope, construct_id, **kwargs)
+        lambdas_root = Path(__file__).resolve().parents[2] / "lambdas"
 
-        # 1. Create Employee Lambda
+        common_env = {
+            "EMPLOYEE_TABLE": employee_table.table_name,
+            "WORKFLOW_TABLE": workflow_table.table_name,
+            "STAGE_STATUS_TABLE": stage_status_table.table_name,
+            "DOCUMENT_TABLE": document_table.table_name,
+            "USER_POOL_ID": user_pool.user_pool_id,
+            "COGNITO_CLIENT_ID": user_pool_client_id,
+            "DOCS_BUCKET_NAME": docs_bucket.bucket_name,
+            "HR_TOPIC_ARN": hr_topic.topic_arn,
+            "ALLOWED_ORIGIN": frontend_origin,
+            "STATE_MACHINE_NAME": "hrms-onboarding-workflow",
+        }
+
+        self.auth_login_fn = _lambda.Function(
+            self, "AuthLoginFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="auth_login.handler",
+            code=_lambda.Code.from_asset(str(lambdas_root / "auth_login")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
+        )
+
+        self.auth_complete_new_password_fn = _lambda.Function(
+            self, "AuthCompleteNewPasswordFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="auth_complete_new_password.handler",
+            code=_lambda.Code.from_asset(str(lambdas_root / "auth_complete_new_password")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
+        )
+
         self.create_employee_fn = _lambda.Function(
             self, "CreateEmployeeFunction",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="create_employee.handler",
-            code=_lambda.Code.from_asset("../lambdas/create_employee"),
-            environment={
-                "EMPLOYEE_TABLE": employee_table.table_name,
-                "USER_POOL_ID": user_pool.user_pool_id
-            },
-            timeout=Duration.seconds(30)
+            code=_lambda.Code.from_asset(str(lambdas_root / "create_employee")),
+            environment={**common_env, "PORTAL_URL": frontend_origin},
+            timeout=Duration.seconds(30),
         )
 
-        # 2. Get Upload URL Lambda
         self.get_upload_url_fn = _lambda.Function(
             self, "GetUploadUrlFunction",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="get_upload_url.handler",
-            code=_lambda.Code.from_asset("../lambdas/get_upload_url"),
-            environment={
-                "DOCS_BUCKET_NAME": docs_bucket_name
-            },
-            timeout=Duration.seconds(30)
+            code=_lambda.Code.from_asset(str(lambdas_root / "get_upload_url")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
         )
 
-        # 3. Process Upload Lambda
         self.process_upload_fn = _lambda.Function(
             self, "ProcessUploadFunction",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="process_upload.handler",
-            code=_lambda.Code.from_asset("../lambdas/process_upload"),
-            environment={
-                "EMPLOYEE_TABLE": employee_table.table_name
-            },
-            timeout=Duration.seconds(30)
+            code=_lambda.Code.from_asset(str(lambdas_root / "process_upload")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
         )
 
-        # Permissions (ONLY DynamoDB + Cognito)
-        employee_table.grant_write_data(self.create_employee_fn)
-        employee_table.grant_write_data(self.process_upload_fn)
+        self.stage_executor_fn = _lambda.Function(
+            self, "StageExecutorFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="stage_executor.handler",
+            code=_lambda.Code.from_asset(str(lambdas_root / "stage_executor")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
+        )
+
+        self.progress_api_fn = _lambda.Function(
+            self, "ProgressApiFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="progress_api.handler",
+            code=_lambda.Code.from_asset(str(lambdas_root / "progress_api")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
+        )
+
+        self.list_employees_fn = _lambda.Function(
+            self, "ListEmployeesFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="list_employees.handler",
+            code=_lambda.Code.from_asset(str(lambdas_root / "list_employees")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
+        )
+
+        self.reminder_trigger_fn = _lambda.Function(
+            self, "ReminderTriggerFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="reminder_trigger.handler",
+            code=_lambda.Code.from_asset(str(lambdas_root / "reminder_trigger")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
+        )
+
+        self.complete_stage_fn = _lambda.Function(
+            self, "CompleteStageFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="complete_stage.handler",
+            code=_lambda.Code.from_asset(str(lambdas_root / "complete_stage")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
+        )
+
+        self.finalize_onboarding_fn = _lambda.Function(
+            self, "FinalizeOnboardingFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="finalize_onboarding.handler",
+            code=_lambda.Code.from_asset(str(lambdas_root / "finalize_onboarding")),
+            environment=common_env,
+            timeout=Duration.seconds(30),
+        )
+
+        for fn in [
+            self.create_employee_fn,
+            self.process_upload_fn,
+            self.stage_executor_fn,
+            self.progress_api_fn,
+            self.list_employees_fn,
+            self.reminder_trigger_fn,
+            self.complete_stage_fn,
+            self.finalize_onboarding_fn,
+        ]:
+            employee_table.grant_read_write_data(fn)
+            workflow_table.grant_read_write_data(fn)
+            stage_status_table.grant_read_write_data(fn)
+            document_table.grant_read_write_data(fn)
+
+        docs_bucket.grant_put(self.get_upload_url_fn)
+        docs_bucket.grant_read(self.process_upload_fn)
+        hr_topic.grant_publish(self.process_upload_fn)
 
         self.create_employee_fn.add_to_role_policy(
             iam.PolicyStatement(
-                actions=[
-                    "cognito-idp:AdminCreateUser",
-                    "cognito-idp:AdminAddUserToGroup"
-                ],
-                resources=[user_pool.user_pool_arn]
+                actions=["cognito-idp:AdminCreateUser", "cognito-idp:AdminAddUserToGroup"],
+                resources=[user_pool.user_pool_arn],
             )
         )
+
+        for fn in [self.auth_login_fn, self.auth_complete_new_password_fn]:
+            fn.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["cognito-idp:InitiateAuth", "cognito-idp:RespondToAuthChallenge"],
+                    resources=[user_pool.user_pool_arn],
+                )
+            )
+
+        for fn in [self.create_employee_fn, self.process_upload_fn, self.complete_stage_fn]:
+            fn.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["states:StartExecution", "states:SendTaskSuccess"],
+                    resources=["*"],
+                )
+            )
+
+        for fn in [self.stage_executor_fn, self.reminder_trigger_fn]:
+            fn.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["events:PutRule", "events:PutTargets", "events:DeleteRule", "events:RemoveTargets"],
+                    resources=["*"],
+                )
+            )
+
+        for fn in [self.create_employee_fn, self.reminder_trigger_fn]:
+            fn.add_to_role_policy(
+                iam.PolicyStatement(actions=["ses:SendEmail", "ses:SendRawEmail"], resources=["*"])
+            )
+
+    def bind_reminder_lambda(self):
+        self.stage_executor_fn.add_environment("REMINDER_LAMBDA_ARN", self.reminder_trigger_fn.function_arn)
