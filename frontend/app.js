@@ -153,7 +153,7 @@
             const status = statusByStage[stage] || 'PENDING';
             const css = status === 'COMPLETE' ? 'complete' : (status === 'IN_PROGRESS' ? 'in-progress' : 'pending');
             const icon = status === 'COMPLETE' ? 'OK' : (status === 'IN_PROGRESS' ? 'IN' : 'PD');
-            const badge = status === 'COMPLETE' ? 'Completed' : (status === 'IN_PROGRESS' ? 'In Progress' : 'Pending');
+            const badge = status === 'COMPLETE' ? 'Verified' : (status === 'IN_PROGRESS' ? 'In Progress' : 'Pending');
             container.insertAdjacentHTML('beforeend', `<div class="stage-card ${css}"><div class="stage-icon">${icon}</div><div class="stage-info"><h3>${stageTitles[stage]}</h3><p>${stage}</p></div><span class="badge badge-${css}">${badge}</span></div>`);
         });
     };

@@ -58,7 +58,7 @@ def handler(event, _context):
         stage_table = dynamodb.Table(os.environ['STAGE_STATUS_TABLE'])
         employee_table = dynamodb.Table(os.environ['EMPLOYEE_TABLE'])
 
-        status = 'VERIFIED'
+        status = 'UPLOADED'
         reason = ''
         if size > MAX_BYTES:
             status = 'REJECTED'
@@ -81,23 +81,18 @@ def handler(event, _context):
         })
 
         docs = doc_table.query(KeyConditionExpression=Key('employee_id').eq(employee_id)).get('Items', [])
-        verified = {d['doc_type'] for d in docs if d.get('status') == 'VERIFIED'}
+        uploaded_docs = {d['doc_type'] for d in docs if d.get('status') == 'UPLOADED'}
 
-        if REQUIRED_DOCS.issubset(verified):
+        if REQUIRED_DOCS.issubset(uploaded_docs):
             stage_table.update_item(
                 Key={'employee_id': employee_id, 'stage_name': 'DOC_COLLECTION'},
-                UpdateExpression='SET #s = :s, completed_at = :t',
-                ExpressionAttributeNames={'#s': 'status'},
-                ExpressionAttributeValues={':s': 'COMPLETE', ':t': now}
+                UpdateExpression='SET updated_at = :t',
+                ExpressionAttributeValues={':t': now}
             )
-            emp = employee_table.get_item(Key={'employee_id': employee_id}).get('Item', {})
-            task_token = emp.get('doc_collection_task_token')
-            if task_token:
-                sfn.send_task_success(taskToken=task_token, output=json.dumps({'employeeId': employee_id, 'stage': 'DOC_COLLECTION'}))
             _remove_rule(f"hrms-{employee_id[:8]}-doc_collection")
             if os.environ.get('HR_TOPIC_ARN'):
                 sns.publish(
                     TopicArn=os.environ['HR_TOPIC_ARN'],
-                    Subject='Documents verified',
-                    Message=f'All required documents verified for {employee_id}'
+                    Subject='Documents Ready for Review',
+                    Message=f'All required documents uploaded for {employee_id}. Ready for HR review.'
                 )
