@@ -34,7 +34,7 @@
 
     const authHeader = () => {
         const { accessToken, idToken } = authTokens();
-        const token = accessToken || idToken;
+        const token = idToken || accessToken;
         return token ? { Authorization: `Bearer ${token}` } : {};
     };
 
