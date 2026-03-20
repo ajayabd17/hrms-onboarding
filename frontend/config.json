@@ -1,5 +1,5 @@
 {
-  "apiBaseUrl": "https://REPLACE_WITH_API_ID.execute-api.ap-south-1.amazonaws.com/prod",
+  "apiBaseUrl": " https://02s0azfuoh.execute-api.ap-south-1.amazonaws.com/prod/",
   "cognitoDomain": "https://hrms-onboarding-169415370420.auth.ap-south-1.amazoncognito.com",
   "cognitoClientId": "hp08mpeaq49rmj1l0fo36gmdq"
 }
