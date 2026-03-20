@@ -26,7 +26,11 @@ class ApiStack(Stack):
             'HrmsApi',
             rest_api_name='hrms-onboarding-api',
             default_cors_preflight_options=apigw.CorsOptions(
-                allow_origins=[frontend_origin, "http://localhost:5173"],
+                allow_origins=[
+                    frontend_origin,
+                    "http://localhost:5173",
+                    "http://hrms-onboarding.s3-website.ap-south-1.amazonaws.com",
+                ],
                 allow_methods=["GET", "POST", "OPTIONS"],
                 allow_headers=["Content-Type", "Authorization"],
             )
