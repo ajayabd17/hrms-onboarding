@@ -27,7 +27,7 @@
                 <h1>Your Onboarding Journey</h1>
                 <p>Complete all stages to be Day 1 ready.</p>
             </div>
-            <div class="status-badge pulse">Status: In Progress</div>
+            <div class="status-badge pulse" id="employee-overall-status">Status: In Progress</div>
         </header>
 
         <section class="progress-section glass-panel">
@@ -56,6 +56,12 @@
                 <button type="submit" class="btn-primary small">Upload Documents</button>
                 <div id="employee-doc-status" style="font-size:14px; margin-top:8px;"></div>
             </form>
+        </section>
+        <section class="pipeline-section glass-panel" style="margin-top: 16px;">
+            <h2>Policy Sign-off</h2>
+            <p style="margin-bottom: 10px;">When requested, confirm policy acceptance to continue onboarding.</p>
+            <button id="employee-policy-signoff-btn" class="btn-primary small" style="display:none;">Accept Policies & Continue</button>
+            <div id="employee-policy-status" style="font-size:14px; margin-top:8px;"></div>
         </section>
 
         <section class="stages-grid"></section>
