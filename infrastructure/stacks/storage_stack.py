@@ -42,6 +42,7 @@ class StorageStack(Stack):
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             enforce_ssl=True,
+            event_bridge_enabled=True,
             removal_policy=RemovalPolicy.RETAIN,
             cors=[s3.CorsRule(
                 allowed_methods=[s3.HttpMethods.PUT, s3.HttpMethods.GET],

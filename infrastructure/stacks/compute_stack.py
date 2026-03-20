@@ -3,6 +3,8 @@ from aws_cdk import (
     Duration,
     aws_lambda as _lambda,
     aws_iam as iam,
+    aws_events as events,
+    aws_events_targets as targets,
 )
 from constructs import Construct
 from pathlib import Path
@@ -167,6 +169,19 @@ class ComputeStack(Stack):
         docs_bucket.grant_put(self.get_upload_url_fn)
         docs_bucket.grant_read(self.process_upload_fn)
         hr_topic.grant_publish(self.process_upload_fn)
+        events.Rule(
+            self,
+            "DocsObjectCreatedRule",
+            event_pattern=events.EventPattern(
+                source=["aws.s3"],
+                detail_type=["Object Created"],
+                detail={
+                    "bucket": {"name": [docs_bucket.bucket_name]},
+                    "object": {"key": [{"prefix": "documents/"}]},
+                },
+            ),
+            targets=[targets.LambdaFunction(self.process_upload_fn)],
+        )
 
         self.create_employee_fn.add_to_role_policy(
             iam.PolicyStatement(

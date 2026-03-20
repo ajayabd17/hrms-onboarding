@@ -2,8 +2,6 @@
 import aws_cdk as cdk
 import os
 from aws_cdk import aws_cognito as cognito
-from aws_cdk import aws_s3 as s3
-from aws_cdk import aws_s3_notifications as s3n
 
 from stacks.storage_stack import StorageStack
 from stacks.compute_stack import ComputeStack
@@ -43,11 +41,6 @@ compute = ComputeStack(
     env=env
 )
 compute.bind_reminder_lambda()
-storage.docs_bucket.add_event_notification(
-    s3.EventType.OBJECT_CREATED,
-    s3n.LambdaDestination(compute.process_upload_fn),
-    s3.NotificationKeyFilter(prefix="documents/")
-)
 
 orchestration = OrchestrationStack(
     app,
