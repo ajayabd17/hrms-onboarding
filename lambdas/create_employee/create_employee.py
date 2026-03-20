@@ -63,9 +63,10 @@ def handler(event, context):
             'updated_at': now
         })
 
+        cognito_username = employee_id
         cognito.admin_create_user(
             UserPoolId=os.environ['USER_POOL_ID'],
-            Username=email,
+            Username=cognito_username,
             DesiredDeliveryMediums=['EMAIL'],
             UserAttributes=[
                 {'Name': 'email', 'Value': email},
@@ -82,7 +83,7 @@ def handler(event, context):
 
         cognito.admin_add_user_to_group(
             UserPoolId=os.environ['USER_POOL_ID'],
-            Username=email,
+            Username=cognito_username,
             GroupName=os.environ.get('EMPLOYEE_GROUP', 'employee')
         )
 
@@ -139,3 +140,4 @@ def handler(event, context):
         return _resp(400, {'error': f'ses rejected email: {str(exc)}'}, event)
     except Exception as exc:
         return _resp(500, {'error': f'create-employee failed: {str(exc)}'}, event)
+

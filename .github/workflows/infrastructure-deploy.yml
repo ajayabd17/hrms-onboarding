@@ -19,23 +19,51 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect changed areas
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            storage:
+              - 'infrastructure/stacks/storage_stack.py'
+            messaging:
+              - 'infrastructure/stacks/messaging_stack.py'
+            compute:
+              - 'infrastructure/stacks/compute_stack.py'
+              - 'lambdas/**'
+            orchestration:
+              - 'infrastructure/stacks/orchestration_stack.py'
+              - 'statemachine/**'
+            api:
+              - 'infrastructure/stacks/api_stack.py'
+            app:
+              - 'infrastructure/app.py'
+              - 'infrastructure/cdk.json'
+              - 'infrastructure/cdk.context.json'
+              - '.github/workflows/infrastructure-deploy.yml'
+
       - name: Setup Python
+        if: steps.changes.outputs.storage == 'true' || steps.changes.outputs.messaging == 'true' || steps.changes.outputs.compute == 'true' || steps.changes.outputs.orchestration == 'true' || steps.changes.outputs.api == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Setup Node
+        if: steps.changes.outputs.storage == 'true' || steps.changes.outputs.messaging == 'true' || steps.changes.outputs.compute == 'true' || steps.changes.outputs.orchestration == 'true' || steps.changes.outputs.api == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
       - name: Install CDK
+        if: steps.changes.outputs.storage == 'true' || steps.changes.outputs.messaging == 'true' || steps.changes.outputs.compute == 'true' || steps.changes.outputs.orchestration == 'true' || steps.changes.outputs.api == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         run: npm install -g aws-cdk
 
       - name: Install Python dependencies
+        if: steps.changes.outputs.storage == 'true' || steps.changes.outputs.messaging == 'true' || steps.changes.outputs.compute == 'true' || steps.changes.outputs.orchestration == 'true' || steps.changes.outputs.api == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         run: pip install -r requirements.txt
 
       - name: Configure AWS credentials
+        if: steps.changes.outputs.storage == 'true' || steps.changes.outputs.messaging == 'true' || steps.changes.outputs.compute == 'true' || steps.changes.outputs.orchestration == 'true' || steps.changes.outputs.api == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -43,19 +71,25 @@ jobs:
           aws-region: ap-south-1
 
       - name: CDK synth
+        if: steps.changes.outputs.storage == 'true' || steps.changes.outputs.messaging == 'true' || steps.changes.outputs.compute == 'true' || steps.changes.outputs.orchestration == 'true' || steps.changes.outputs.api == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         run: cdk synth
 
       - name: Deploy Storage
+        if: steps.changes.outputs.storage == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         run: cdk deploy HrmsStorageStack --require-approval never
 
       - name: Deploy Messaging
+        if: steps.changes.outputs.messaging == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         run: cdk deploy HrmsMessagingStack --require-approval never
 
       - name: Deploy Compute
+        if: steps.changes.outputs.compute == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         run: cdk deploy HrmsComputeStack --require-approval never
 
       - name: Deploy Orchestration
+        if: steps.changes.outputs.orchestration == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         run: cdk deploy HrmsOrchestrationStack --require-approval never
 
       - name: Deploy API
+        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
         run: cdk deploy HrmsApiStack --require-approval never
