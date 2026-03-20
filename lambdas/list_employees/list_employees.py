@@ -8,11 +8,20 @@ from boto3.dynamodb.conditions import Key
 dynamodb = boto3.resource('dynamodb')
 
 
-def _resp(code: int, body: dict):
+def _cors_origin(event):
+    headers = (event or {}).get('headers') or {}
+    origin = headers.get('origin') or headers.get('Origin')
+    allowed = {o.strip() for o in os.environ.get('ALLOWED_ORIGINS', '').split(',') if o.strip()}
+    if origin and origin in allowed:
+        return origin
+    return os.environ.get('ALLOWED_ORIGIN', '*')
+
+
+def _resp(code: int, body: dict, event=None):
     return {
         'statusCode': code,
         'headers': {
-            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', '*'),
+            'Access-Control-Allow-Origin': _cors_origin(event),
             'Access-Control-Allow-Headers': 'Content-Type,Authorization',
             'Access-Control-Allow-Methods': 'OPTIONS,GET'
         },
@@ -20,7 +29,7 @@ def _resp(code: int, body: dict):
     }
 
 
-def handler(_event, _context):
+def handler(event, _context):
     employee_table = dynamodb.Table(os.environ['EMPLOYEE_TABLE'])
     stage_table = dynamodb.Table(os.environ['STAGE_STATUS_TABLE'])
 
@@ -48,4 +57,4 @@ def handler(_event, _context):
             'active_stage': in_progress or 'PENDING',
         })
 
-    return _resp(200, {'employees': result})
+    return _resp(200, {'employees': result}, event)

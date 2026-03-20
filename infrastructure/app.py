@@ -16,7 +16,7 @@ env = cdk.Environment(
     region=os.environ.get("CDK_DEFAULT_REGION", "ap-south-1")
 )
 
-frontend_origin = os.environ.get("HRMS_FRONTEND_ORIGIN", "https://dhkkwtcsx3bir.cloudfront.net")
+frontend_origin = os.environ.get("HRMS_FRONTEND_ORIGIN", "https://dhkkwtcsx3bir.cloudfront.net").rstrip("/")
 
 storage = StorageStack(app, "HrmsStorageStack", frontend_origin=frontend_origin, env=env)
 

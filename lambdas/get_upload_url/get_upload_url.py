@@ -9,11 +9,20 @@ ALLOWED_DOC_TYPES = {'ID_PROOF', 'DEGREE_CERT', 'OFFER_LETTER'}
 ALLOWED_CONTENT_TYPES = {'application/pdf', 'image/jpeg', 'image/png'}
 
 
-def _resp(code: int, body: dict):
+def _cors_origin(event):
+    headers = (event or {}).get('headers') or {}
+    origin = headers.get('origin') or headers.get('Origin')
+    allowed = {o.strip() for o in os.environ.get('ALLOWED_ORIGINS', '').split(',') if o.strip()}
+    if origin and origin in allowed:
+        return origin
+    return os.environ.get('ALLOWED_ORIGIN', '*')
+
+
+def _resp(code: int, body: dict, event=None):
     return {
         'statusCode': code,
         'headers': {
-            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', '*'),
+            'Access-Control-Allow-Origin': _cors_origin(event),
             'Access-Control-Allow-Headers': 'Content-Type,Authorization',
             'Access-Control-Allow-Methods': 'OPTIONS,GET'
         },
@@ -29,11 +38,11 @@ def handler(event, _context):
     content_type = qs.get('content_type', 'application/pdf')
 
     if not employee_id or not doc_type:
-        return _resp(400, {'error': 'employee_id and doc_type are required'})
+        return _resp(400, {'error': 'employee_id and doc_type are required'}, event)
     if doc_type not in ALLOWED_DOC_TYPES:
-        return _resp(400, {'error': f'unsupported doc_type: {doc_type}'})
+        return _resp(400, {'error': f'unsupported doc_type: {doc_type}'}, event)
     if content_type not in ALLOWED_CONTENT_TYPES:
-        return _resp(400, {'error': f'unsupported content_type: {content_type}'})
+        return _resp(400, {'error': f'unsupported content_type: {content_type}'}, event)
 
     key = f"documents/{employee_id}/{doc_type}/{file_name}"
 
@@ -48,4 +57,4 @@ def handler(event, _context):
         ExpiresIn=900,
     )
 
-    return _resp(200, {'upload_url': upload_url, 'key': key})
+    return _resp(200, {'upload_url': upload_url, 'key': key}, event)

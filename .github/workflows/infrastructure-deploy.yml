@@ -3,10 +3,6 @@ name: Infrastructure Deploy
 on:
   push:
     branches: ["main"]
-    paths:
-      - "infrastructure/**"
-      - "lambdas/**"
-      - ".github/workflows/infrastructure-deploy.yml"
   workflow_dispatch:
 
 jobs:

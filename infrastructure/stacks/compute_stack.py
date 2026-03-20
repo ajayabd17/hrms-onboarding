@@ -3,10 +3,10 @@ from aws_cdk import (
     Duration,
     aws_lambda as _lambda,
     aws_iam as iam,
-    aws_s3 as s3,
 )
 from constructs import Construct
 from pathlib import Path
+import os
 
 
 class ComputeStack(Stack):
@@ -27,6 +27,8 @@ class ComputeStack(Stack):
     ):
         super().__init__(scope, construct_id, **kwargs)
         lambdas_root = Path(__file__).resolve().parents[2] / "lambdas"
+        ses_from_email = self.node.try_get_context("sesFromEmail") or os.environ.get("HRMS_SES_FROM_EMAIL", "")
+        temp_password = self.node.try_get_context("tempPassword") or os.environ.get("HRMS_TEMP_PASSWORD", "TempPassw0rd!")
 
         common_env = {
             "EMPLOYEE_TABLE": employee_table.table_name,
@@ -38,7 +40,15 @@ class ComputeStack(Stack):
             "DOCS_BUCKET_NAME": docs_bucket.bucket_name,
             "HR_TOPIC_ARN": hr_topic.topic_arn,
             "ALLOWED_ORIGIN": frontend_origin,
+            "ALLOWED_ORIGINS": ",".join([
+                frontend_origin,
+                "http://localhost:5173",
+                "http://hrms-onboarding.s3-website.ap-south-1.amazonaws.com",
+            ]),
             "STATE_MACHINE_NAME": "hrms-onboarding-workflow",
+            "PORTAL_URL": frontend_origin,
+            "SES_FROM_EMAIL": ses_from_email,
+            "TEMP_PASSWORD": temp_password,
         }
 
         self.auth_login_fn = _lambda.Function(
@@ -64,7 +74,7 @@ class ComputeStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="create_employee.handler",
             code=_lambda.Code.from_asset(str(lambdas_root / "create_employee")),
-            environment={**common_env, "PORTAL_URL": frontend_origin},
+            environment=common_env,
             timeout=Duration.seconds(30),
         )
 

@@ -35,6 +35,24 @@ class ApiStack(Stack):
                 allow_headers=["Content-Type", "Authorization"],
             )
         )
+        api.add_gateway_response(
+            "Default4xxWithCors",
+            type=apigw.ResponseType.DEFAULT_4_XX,
+            response_headers={
+                "Access-Control-Allow-Origin": "'*'",
+                "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+                "Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
+            },
+        )
+        api.add_gateway_response(
+            "Default5xxWithCors",
+            type=apigw.ResponseType.DEFAULT_5_XX,
+            response_headers={
+                "Access-Control-Allow-Origin": "'*'",
+                "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+                "Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
+            },
+        )
 
         authorizer = apigw.CognitoUserPoolsAuthorizer(self, 'HrmsAuthorizer', cognito_user_pools=[user_pool])
 

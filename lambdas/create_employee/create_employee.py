@@ -12,11 +12,20 @@ ses = boto3.client('ses')
 sfn = boto3.client('stepfunctions')
 
 
-def _resp(code: int, body: dict):
+def _cors_origin(event):
+    headers = (event or {}).get('headers') or {}
+    origin = headers.get('origin') or headers.get('Origin')
+    allowed = {o.strip() for o in os.environ.get('ALLOWED_ORIGINS', '').split(',') if o.strip()}
+    if origin and origin in allowed:
+        return origin
+    return os.environ.get('ALLOWED_ORIGIN', '*')
+
+
+def _resp(code: int, body: dict, event=None):
     return {
         'statusCode': code,
         'headers': {
-            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', '*'),
+            'Access-Control-Allow-Origin': _cors_origin(event),
             'Access-Control-Allow-Headers': 'Content-Type,Authorization',
             'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
         },
@@ -29,7 +38,7 @@ def handler(event, context):
     required = ['email', 'full_name', 'department', 'role', 'manager_id', 'joining_date', 'employment_type']
     missing = [k for k in required if not payload.get(k)]
     if missing:
-        return _resp(400, {'error': f'missing fields: {", ".join(missing)}'})
+        return _resp(400, {'error': f'missing fields: {", ".join(missing)}'}, event)
 
     employee_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -51,12 +60,10 @@ def handler(event, context):
         'updated_at': now
     })
 
-    temp_password = os.environ.get('TEMP_PASSWORD', 'TempPassw0rd!')
     cognito.admin_create_user(
         UserPoolId=os.environ['USER_POOL_ID'],
         Username=payload['email'].strip().lower(),
-        TemporaryPassword=temp_password,
-        MessageAction='SUPPRESS',
+        DesiredDeliveryMediums=['EMAIL'],
         UserAttributes=[
             {'Name': 'email', 'Value': payload['email'].strip().lower()},
             {'Name': 'email_verified', 'Value': 'true'},
@@ -81,7 +88,7 @@ def handler(event, context):
                     'Text': {
                         'Data': (
                             f"Hi {payload['full_name']},\n\n"
-                            f"Use this temporary password to log in: {temp_password}\n"
+                            "Your Cognito temporary password has been sent by AWS.\n"
                             f"Portal: {portal_url}\n"
                         )
                     }
@@ -113,4 +120,4 @@ def handler(event, context):
         'updated_at': now,
     })
 
-    return _resp(200, {'employee_id': employee_id, 'execution_arn': execution_arn})
+    return _resp(200, {'employee_id': employee_id, 'execution_arn': execution_arn}, event)
