@@ -17,6 +17,15 @@
         cognitoDomain: '',
         cognitoClientId: '',
     };
+    let hrBusy = false;
+    let employeeBusy = false;
+
+    const isUserEditing = () => {
+        const el = document.activeElement;
+        if (!el) return false;
+        const tag = (el.tagName || '').toLowerCase();
+        return tag === 'input' || tag === 'textarea' || tag === 'select';
+    };
 
     const parseJwt = (token) => {
         try {
@@ -138,6 +147,7 @@
         const bar = document.querySelector('.progress-fill.gradient-accent');
         const label = document.querySelector('.progress-label');
         const container = document.querySelector('.stages-grid');
+        const overallStatusEl = document.getElementById('employee-overall-status');
         if (!bar || !label || !container) return;
 
         const statusByStage = {};
@@ -147,6 +157,10 @@
         const pct = Math.round((completed / stageOrder.length) * 100);
         bar.style.width = `${pct}%`;
         label.textContent = `${pct}% Completed`;
+        if (overallStatusEl) {
+            const wf = payload.workflow_status || (pct === 100 ? 'COMPLETED' : 'IN_PROGRESS');
+            overallStatusEl.textContent = `Status: ${wf}`;
+        }
 
         container.innerHTML = '';
         stageOrder.forEach((stage) => {
@@ -156,6 +170,11 @@
             const badge = status === 'COMPLETE' ? 'Verified' : (status === 'IN_PROGRESS' ? 'In Progress' : 'Pending');
             container.insertAdjacentHTML('beforeend', `<div class="stage-card ${css}"><div class="stage-icon">${icon}</div><div class="stage-info"><h3>${stageTitles[stage]}</h3><p>${stage}</p></div><span class="badge badge-${css}">${badge}</span></div>`);
         });
+    };
+    const getActiveStage = (payload) => {
+        if (!payload || !Array.isArray(payload.stages)) return 'PENDING';
+        const inProgress = payload.stages.find((s) => s.status === 'IN_PROGRESS');
+        return inProgress ? inProgress.stage_name : 'PENDING';
     };
 
     const renderPipeline = (payload) => {
@@ -176,11 +195,15 @@
             const statusClass = isComplete ? 'badge-complete' : (emp.active_stage === 'PENDING' ? 'badge-pending' : 'badge-in-progress');
             const statusText = isComplete ? 'Ready' : (emp.active_stage || 'PENDING');
             const initials = (emp.full_name || 'NA').slice(0, 2).toUpperCase();
-            const canComplete = !isComplete && stageOrder.includes(emp.active_stage || '');
-            const actionHtml = canComplete
-                ? `<button class="btn-outline small hr-complete-stage-btn" data-employee-id="${emp.employee_id}" data-stage="${emp.active_stage}">Complete ${stageTitles[emp.active_stage] || emp.active_stage}</button>`
-                : '';
-            list.insertAdjacentHTML('beforeend', `<div class="pipeline-item reveal"><div class="emp-details"><div class="avatar">${initials}</div><div><h4>${emp.full_name || emp.email || emp.employee_id}</h4><span>${emp.department || 'NA'} | ID: ${emp.employee_id}</span></div></div><div class="hr-progress"><div class="hero-progress-bar compact"><div class="progress-fill in-progress-bg" style="width: ${pct}%"></div></div><span class="step-label">${done}/4 Completed</span></div><div class="status-col"><span class="badge ${statusClass}">${statusText}</span>${actionHtml}</div></div>`);
+            const activeStage = emp.active_stage || 'PENDING';
+            const actionStages = ['IT_PROVISIONING', 'POLICY_SIGNOFF', 'MANAGER_INTRO'];
+            const actionHtml = !isComplete ? actionStages.map((stage) => {
+                const isActive = stage === activeStage;
+                const disabled = isActive ? '' : 'disabled';
+                const doneText = done >= stageOrder.indexOf(stage) + 1 ? ' (Done)' : '';
+                return `<button class="btn-outline small hr-complete-stage-btn" data-employee-id="${emp.employee_id}" data-stage="${stage}" ${disabled}>Complete ${stageTitles[stage]}${doneText}</button>`;
+            }).join(' ') : '';
+            list.insertAdjacentHTML('beforeend', `<div class="pipeline-item reveal"><div class="emp-details"><div class="avatar">${initials}</div><div><h4>${emp.full_name || emp.email || emp.employee_id}</h4><span>${emp.department || 'NA'} | ID: ${emp.employee_id}</span></div></div><div class="hr-progress"><div class="hero-progress-bar compact"><div class="progress-fill in-progress-bg" style="width: ${pct}%"></div></div><span class="step-label">${done}/4 Completed</span></div><div class="status-col"><span class="badge ${statusClass}">${statusText}</span><div style="display:flex; gap:6px; flex-wrap:wrap; margin-left:8px;">${actionHtml}</div></div></div>`);
         });
 
         if (activeEl) activeEl.textContent = String(active);
@@ -270,8 +293,18 @@
         if (isEmployee()) {
             const params = new URLSearchParams(window.location.search);
             const employeeId = params.get('employee_id') || localStorage.getItem('HRMS_EMPLOYEE_ID') || '';
+            const refreshEmployeeProgress = async () => {
+                if (!employeeId) return;
+                const progress = await fetchProgress(employeeId);
+                renderEmployeeProgress(progress);
+                const activeStage = getActiveStage(progress);
+                const signoffBtn = document.getElementById('employee-policy-signoff-btn');
+                if (signoffBtn) signoffBtn.style.display = activeStage === 'POLICY_SIGNOFF' ? 'inline-flex' : 'none';
+            };
             if (employeeId) {
-                try { renderEmployeeProgress(await fetchProgress(employeeId)); } catch (_e) {}
+                try {
+                    await refreshEmployeeProgress();
+                } catch (_e) {}
             }
 
             const docForm = document.getElementById('employee-doc-form');
@@ -279,6 +312,7 @@
             if (docForm) {
                 docForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    employeeBusy = true;
                     const empId = employeeId || localStorage.getItem('HRMS_EMPLOYEE_ID') || '';
                     if (!empId) {
                         if (docStatus) docStatus.textContent = 'Employee ID missing. Please login again.';
@@ -299,12 +333,32 @@
                             await uploadFile(u.upload_url, f.file);
                         }
                         if (docStatus) docStatus.textContent = 'Documents uploaded successfully.';
-                        renderEmployeeProgress(await fetchProgress(empId));
+                        await refreshEmployeeProgress();
                     } catch (err) {
                         if (docStatus) docStatus.textContent = `Upload failed: ${err.message}`;
+                    } finally {
+                        employeeBusy = false;
                     }
                 });
             }
+
+            const signoffBtn = document.getElementById('employee-policy-signoff-btn');
+            const signoffStatus = document.getElementById('employee-policy-status');
+            if (signoffBtn) {
+                signoffBtn.addEventListener('click', async () => {
+                    employeeBusy = true;
+                    try {
+                        await completeStage(employeeId, 'POLICY_SIGNOFF');
+                        if (signoffStatus) signoffStatus.textContent = 'Policy sign-off submitted.';
+                        await refreshEmployeeProgress();
+                    } catch (err) {
+                        if (signoffStatus) signoffStatus.textContent = `Failed: ${err.message}`;
+                    } finally {
+                        employeeBusy = false;
+                    }
+                });
+            }
+
         }
 
         if (isHr()) {
@@ -321,6 +375,7 @@
             if (createForm) {
                 createForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    hrBusy = true;
                     const payload = {
                         full_name: document.getElementById('emp_full_name').value.trim(),
                         email: document.getElementById('emp_email').value.trim(),
@@ -337,6 +392,8 @@
                         renderPipeline(await fetchEmployees());
                     } catch (err) {
                         if (status) status.textContent = `Failed: ${err.message}`;
+                    } finally {
+                        hrBusy = false;
                     }
                 });
             }
@@ -352,6 +409,7 @@
                     const oldText = btn.textContent;
                     btn.disabled = true;
                     btn.textContent = 'Updating...';
+                    hrBusy = true;
                     try {
                         await completeStage(employeeId, stage);
                         renderPipeline(await fetchEmployees());
@@ -359,11 +417,16 @@
                         btn.disabled = false;
                         btn.textContent = oldText;
                         if (status) status.textContent = `Stage update failed: ${err.message}`;
+                    } finally {
+                        hrBusy = false;
                     }
                 });
             }
 
-            try { renderPipeline(await fetchEmployees()); } catch (_e) {}
+            const refreshHrPipeline = async () => {
+                renderPipeline(await fetchEmployees());
+            };
+            try { await refreshHrPipeline(); } catch (_e) {}
         }
     });
 })();
